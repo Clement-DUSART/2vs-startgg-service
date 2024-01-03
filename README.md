@@ -1,2 +1,2 @@
 # Sheets_CG-Overlays
-Sheets_CG-Overlays is an Start.GG overlay manager hosted by Google Sheets. Basicly, the manager gets the variables tournament infos from start GG by API and makes it accessible for any stream software.
+2vs-startgg-service is an Start.GG middleware used to request Start.gg by api. Those data will be transfered to a stream manager on google sheets so the variables tournament are accessible for any stream software.
