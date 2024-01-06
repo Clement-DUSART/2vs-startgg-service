@@ -9,8 +9,7 @@ case class Player(
     country: Option[String],
     city: Option[String],
     twitter: Option[String],
-    twitch: Option[String]
-)
+    twitch: Option[String])
 
 object Player:
     given playerCodec: Codec[Player] = deriveCodec[Player]

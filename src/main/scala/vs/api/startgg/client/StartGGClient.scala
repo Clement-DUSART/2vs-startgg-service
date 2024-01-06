@@ -1,11 +1,12 @@
 package vs.api.startgg.client
 
+import cats.Applicative
 import cats.data.EitherT
+import cats.effect.Async
+import cats.effect.Concurrent
 import cats.effect.kernel.Outcome.Canceled
 import cats.effect.kernel.Outcome.Errored
 import cats.effect.kernel.Outcome.Succeeded
-import cats.effect.Async
-import cats.effect.Concurrent
 import cats.implicits.*
 import io.circe
 import io.circe.Decoder
@@ -17,55 +18,49 @@ import sttp.model.Uri
 import vs.api.startgg.query.Query.PaginatedQuery
 import vs.api.startgg.query.Query.Pagination
 import vs.api.startgg.query.Query.SimpleQuery
-import vs.api.startgg.query.Response.PaginatedResponse
+import vs.api.startgg.response.Response.PaginatedResponse
 
-class StartGGClient[F[_]: Async](
+class StartGGClient[F[_]: Async: Applicative](
     startGGApiUri: Uri,
-    httpClient: SttpBackend[F, Fs2Streams[F]]
-):
+    httpClient: SttpBackend[F, Fs2Streams[F]]):
     private def concurrentRequests[R: Decoder](
         requests: List[SimpleQuery],
-        apiToken: String
-    ) = EitherT(
+        apiToken: String) = EitherT(
       for {
         fibers <- requests
           .map(request => makeRequest[R](request, apiToken).value)
           .traverse(Concurrent[F].start)
 
         outcomes <- fibers.traverse(_.join)
-        results <-
-          outcomes
-            .map {
-              case Succeeded(fa) =>
-                EitherT(fa)
-              case Errored(e) =>
-                EitherT.fromEither[F](Left[Any, R](e))
-              case Canceled() =>
-                EitherT
-                  .fromEither[F](Left[Any, R](Exception("Cancelled request")))
-            }
-            .sequence
-            .value
-      } yield results)
+        results <- outcomes
+          .traverse {
+            case Succeeded(fa) =>
+              fa
+            case Errored(e) =>
+              Left[Any, R](e).pure[F]
+            case Canceled() =>
+              Left[Any, R](Exception("Cancelled request")).pure[F]
+          }
+          .map(_.sequence)
+      } yield results
+    )
 
-    private def makeRequest[R: Decoder](
+    def makeRequest[R: Decoder](
         simpleQuery: SimpleQuery,
-        apiToken: String
-    ): EitherT[F, Any, R] = EitherT(
+        apiToken: String): EitherT[F, Any, R] = EitherT(
       basicRequest
         .post(startGGApiUri)
         .body(simpleQuery)
         .headers(Map("Authorization" -> s"Bearer $apiToken"))
         .response(asJson[R])
         .send(httpClient)
-        .map(_.body))
+        .map(_.body)
+    )
 
-    def makePaginatedRequest[Q <: PaginatedQuery, R <: PaginatedResponse[
-      R]: Decoder](
-        query: Q,
+    def makePaginatedRequest[R <: PaginatedResponse[R]: Decoder](
+        query: PaginatedQuery,
         apiToken: String,
-        perPage: Int = 50
-    ): EitherT[F, Any, R] =
+        perPage: Int = 50): EitherT[F, Any, R] =
         val firstQuery = query.withPaginationInfo(Pagination(1, perPage))
 
         for {

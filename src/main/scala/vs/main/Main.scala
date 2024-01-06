@@ -20,7 +20,8 @@ object Main extends IOApp:
             client =
               new StartGGClient[IO](
                 Uri("https", "api.start.gg", Seq("gql/alpha")),
-                backEnd)
+                backEnd
+              )
             caller = new StartGGCallerImpl[IO](client)
             controller = new Controller[IO](caller)
             port = port"9000"
@@ -40,7 +41,8 @@ object Main extends IOApp:
           .use { server =>
             for {
               _ <- IO.println(
-                s"Server started at http://localhost:${server.address.getPort}. Press ENTER key to exit.")
+                s"Server started at http://localhost:${server.address.getPort}. Press ENTER key to exit."
+              )
               _ <- IO.never
             } yield ()
           }
