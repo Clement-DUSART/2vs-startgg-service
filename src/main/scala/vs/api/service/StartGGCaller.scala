@@ -3,9 +3,7 @@ package vs.api.service
 import cats.data.EitherT
 import cats.effect.Async
 import cats.implicits.*
-import vs.api.model.BracketSet
-import vs.api.model.Event
-import vs.api.model.Player
+import vs.api.model.{BracketSet, Event, Player, StreamQueue}
 import vs.api.startgg.client.StartGGClient
 import vs.api.startgg.model.GGParticipant
 import vs.api.startgg.query.*
@@ -24,6 +22,11 @@ trait StartGGCaller[F[_]] {
       eventId: String,
       phaseGroupIdentifier: String,
       apiToken: String): EitherT[F, String, Seq[BracketSet]]
+
+  def getStreamQueue(
+      eventId: String,
+      streamName: String,
+      apiToken: String): EitherT[F, String, Seq[StreamQueue]]
 }
 
 class StartGGCallerImpl[F[_]: Async](startGGClient: StartGGClient[F])
@@ -144,4 +147,42 @@ class StartGGCallerImpl[F[_]: Async](startGGClient: StartGGClient[F])
         .map(_.id)
     } yield groupPhaseId
   }
+
+  private def mapStreamQueueResponse(
+      response: GetStreamQueueResponse): Seq[StreamQueue] = response
+    .data
+    .streamQueue
+    .flatMap { sq =>
+      sq.sets
+        .map { set =>
+          StreamQueue(
+            identifier = set.identifier,
+            pool = set.phaseGroup.displayIdentifier,
+            player1 = set.slots.head.standing.entrant.standing.player.gamerTag,
+            player2 = set.slots.last.standing.entrant.standing.player.gamerTag,
+            streamName = sq.stream.streamName
+          )
+        }
+    }
+  override def getStreamQueue(
+      eventId: String,
+      streamName: String,
+      apiToken: String): EitherT[F, String, Seq[StreamQueue]] =
+    for {
+      tournamentIdResponse <- startGGClient
+        .makeRequest[GetTournamentIdResponse](
+          new GetTournamentIdRequest(eventId),
+          apiToken
+        )
+        .leftMap(_.toString)
+      tournamentId = tournamentIdResponse.data.event.tournament.id
+      streamQueueResponse <- startGGClient
+        .makeRequest[GetStreamQueueResponse](
+          new GetStreamQueueRequest(tournamentId.toString),
+          apiToken
+        )
+        .leftMap(_.toString)
+      response = mapStreamQueueResponse(streamQueueResponse)
+        .filter(_.streamName.toUpperCase == streamName.toUpperCase)
+    } yield response
 }
