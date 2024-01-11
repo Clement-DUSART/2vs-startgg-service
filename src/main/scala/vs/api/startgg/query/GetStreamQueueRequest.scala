@@ -3,10 +3,7 @@ package vs.api.startgg.query
 import vs.api.startgg.query.Query.SimpleQuery
 
 class GetStreamQueueRequest(tournamentId: String)
-    extends SimpleQuery(
-      GetStreamQueueRequest.query,
-      Map("tournamentId" -> tournamentId)
-    )
+    extends SimpleQuery(GetStreamQueueRequest.query, Map("tournamentId" -> tournamentId))
 object GetStreamQueueRequest {
 
   val query =

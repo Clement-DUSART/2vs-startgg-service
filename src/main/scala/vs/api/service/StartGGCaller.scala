@@ -3,55 +3,49 @@ package vs.api.service
 import cats.data.EitherT
 import cats.effect.Async
 import cats.implicits.*
-import vs.api.model.{BracketSet, Event, Player, StreamQueue}
+import vs.api.model.BracketSet
+import vs.api.model.Event
+import vs.api.model.Player
+import vs.api.model.StreamQueue
 import vs.api.startgg.client.StartGGClient
 import vs.api.startgg.model.GGParticipant
 import vs.api.startgg.query.*
 import vs.api.startgg.response.*
 
 trait StartGGCaller[F[_]] {
-  def getTournamentsParticipants(
-      tournamentSlug: String,
-      apiToken: String): EitherT[F, String, Seq[Player]]
+  def getTournamentsParticipants(tournamentSlug: String, apiToken: String): EitherT[F, String, Seq[Player]]
 
-  def getTournamentEvents(
-      tournamentSlug: String,
-      apiToken: String): EitherT[F, String, Seq[Event]]
+  def getTournamentEvents(tournamentSlug: String, apiToken: String): EitherT[F, String, Seq[Event]]
 
   def getEventBracket(
       eventId: String,
       phaseGroupIdentifier: String,
       apiToken: String): EitherT[F, String, Seq[BracketSet]]
 
-  def getStreamQueue(
-      eventId: String,
-      streamName: String,
-      apiToken: String): EitherT[F, String, Seq[StreamQueue]]
+  def getStreamQueue(eventId: String, streamName: String, apiToken: String): EitherT[F, String, Seq[StreamQueue]]
 }
 
-class StartGGCallerImpl[F[_]: Async](startGGClient: StartGGClient[F])
-    extends StartGGCaller[F] {
-  private def mapPlayers(ggPlayer: Seq[GGParticipant]): Seq[Player] = ggPlayer
-    .map { ggPlayer =>
-      Player(
-        gamerTag = ggPlayer.player.gamerTag,
-        prefix = ggPlayer.player.prefix,
-        country = ggPlayer.user.flatMap(_.location.country),
-        city = ggPlayer.user.flatMap(_.location.city),
-        twitter = ggPlayer
-          .user
-          .flatMap(_.authorizations)
-          .getOrElse(List.empty)
-          .find(_.`type` == "TWITTER")
-          .flatMap(_.externalUsername),
-        twitch = ggPlayer
-          .user
-          .flatMap(_.authorizations)
-          .getOrElse(List.empty)
-          .find(_.`type` == "TWITCH")
-          .flatMap(_.externalUsername)
-      )
-    }
+class StartGGCallerImpl[F[_]: Async](startGGClient: StartGGClient[F]) extends StartGGCaller[F] {
+  private def mapPlayers(ggPlayer: Seq[GGParticipant]): Seq[Player] = ggPlayer.map { ggPlayer =>
+    Player(
+      gamerTag = ggPlayer.player.gamerTag,
+      prefix = ggPlayer.player.prefix,
+      country = ggPlayer.user.flatMap(_.location.country),
+      city = ggPlayer.user.flatMap(_.location.city),
+      twitter = ggPlayer
+        .user
+        .flatMap(_.authorizations)
+        .getOrElse(List.empty)
+        .find(_.`type` == "TWITTER")
+        .flatMap(_.externalUsername),
+      twitch = ggPlayer
+        .user
+        .flatMap(_.authorizations)
+        .getOrElse(List.empty)
+        .find(_.`type` == "TWITCH")
+        .flatMap(_.externalUsername)
+    )
+  }
 
   private def mapEventsResponse(response: GetEventsResponse) = response
     .data
@@ -62,16 +56,11 @@ class StartGGCallerImpl[F[_]: Async](startGGClient: StartGGClient[F])
       BracketSet(
         setIdentifier = event.identifier,
         phase = event.fullRoundText,
-        player1Prefix =
-          event.slots.head.standing.entrant.standing.player.prefix,
-        player1GamerTag =
-          event.slots.head.standing.entrant.standing.player.gamerTag,
-        player2Prefix =
-          event.slots.last.standing.entrant.standing.player.prefix,
-        player2GamerTag =
-          event.slots.last.standing.entrant.standing.player.gamerTag,
-        score =
-          s"${event.slots.head.standing.stats.score.value} - ${event.slots.last.standing.stats.score.value}"
+        player1Prefix = event.slots.head.standing.entrant.standing.player.prefix,
+        player1GamerTag = event.slots.head.standing.entrant.standing.player.gamerTag,
+        player2Prefix = event.slots.last.standing.entrant.standing.player.prefix,
+        player2GamerTag = event.slots.last.standing.entrant.standing.player.gamerTag,
+        score = s"${event.slots.head.standing.stats.score.value} - ${event.slots.last.standing.stats.score.value}"
       )
     )
 
@@ -81,9 +70,7 @@ class StartGGCallerImpl[F[_]: Async](startGGClient: StartGGClient[F])
     else
       b1.setIdentifier.length - b2.setIdentifier.length < 0
 
-  override def getTournamentsParticipants(
-      tournamentSlug: String,
-      apiToken: String): EitherT[F, String, Seq[Player]] = {
+  override def getTournamentsParticipants(tournamentSlug: String, apiToken: String): EitherT[F, String, Seq[Player]] = {
     val query = new GetPlayersFromTournamentQuery(tournamentSlug)
     startGGClient
       .makePaginatedRequest[GetPlayersResponse](query, apiToken, 75)
@@ -97,13 +84,8 @@ class StartGGCallerImpl[F[_]: Async](startGGClient: StartGGClient[F])
       phaseGroupIdentifier: String,
       apiToken: String): EitherT[F, String, Seq[BracketSet]] =
     for {
-      phaseGroupIdOpt <- getPhaseGroupId(
-        phaseGroupIdentifier,
-        eventId,
-        apiToken
-      ).leftMap(_.toString)
-      phaseGroupId <- EitherT
-        .fromEither[F](phaseGroupIdOpt.toRight("Phase group id not found"))
+      phaseGroupIdOpt <- getPhaseGroupId(phaseGroupIdentifier, eventId, apiToken).leftMap(_.toString)
+      phaseGroupId <- EitherT.fromEither[F](phaseGroupIdOpt.toRight("Phase group id not found"))
       events <- startGGClient
         .makePaginatedRequest[GetEventsResponse](
           new GetEventsQuery(eventId, phaseGroupId.toString),
@@ -113,9 +95,7 @@ class StartGGCallerImpl[F[_]: Async](startGGClient: StartGGClient[F])
         .leftMap(_.toString)
     } yield mapEventsResponse(events).sortWith((a, b) => bracketSetSorter(a, b))
 
-  override def getTournamentEvents(
-      tournamentSlug: String,
-      apiToken: String): EitherT[F, String, Seq[Event]] = {
+  override def getTournamentEvents(tournamentSlug: String, apiToken: String): EitherT[F, String, Seq[Event]] = {
     val query = new GetEventIdsQuery(tournamentSlug)
     startGGClient
       .makeRequest[GetEventIdsResponse](query, apiToken)
@@ -137,19 +117,12 @@ class StartGGCallerImpl[F[_]: Async](startGGClient: StartGGClient[F])
       apiToken: String): EitherT[F, Any, Option[Int]] = {
     val query = new GetPhaseGroupQuery(eventId)
     for {
-      groups <- startGGClient
-        .makeRequest[GetPhaseGroupResponse](query, apiToken)
-      groupPhaseId = groups
-        .data
-        .event
-        .phaseGroups
-        .find(_.displayIdentifier == groupIdentifier)
-        .map(_.id)
+      groups <- startGGClient.makeRequest[GetPhaseGroupResponse](query, apiToken)
+      groupPhaseId = groups.data.event.phaseGroups.find(_.displayIdentifier == groupIdentifier).map(_.id)
     } yield groupPhaseId
   }
 
-  private def mapStreamQueueResponse(
-      response: GetStreamQueueResponse): Seq[StreamQueue] = response
+  private def mapStreamQueueResponse(response: GetStreamQueueResponse): Seq[StreamQueue] = response
     .data
     .streamQueue
     .flatMap { sq =>
@@ -170,19 +143,12 @@ class StartGGCallerImpl[F[_]: Async](startGGClient: StartGGClient[F])
       apiToken: String): EitherT[F, String, Seq[StreamQueue]] =
     for {
       tournamentIdResponse <- startGGClient
-        .makeRequest[GetTournamentIdResponse](
-          new GetTournamentIdRequest(eventId),
-          apiToken
-        )
+        .makeRequest[GetTournamentIdResponse](new GetTournamentIdRequest(eventId), apiToken)
         .leftMap(_.toString)
       tournamentId = tournamentIdResponse.data.event.tournament.id
       streamQueueResponse <- startGGClient
-        .makeRequest[GetStreamQueueResponse](
-          new GetStreamQueueRequest(tournamentId.toString),
-          apiToken
-        )
+        .makeRequest[GetStreamQueueResponse](new GetStreamQueueRequest(tournamentId.toString), apiToken)
         .leftMap(_.toString)
-      response = mapStreamQueueResponse(streamQueueResponse)
-        .filter(_.streamName.toUpperCase == streamName.toUpperCase)
+      response = mapStreamQueueResponse(streamQueueResponse).filter(_.streamName.toUpperCase == streamName.toUpperCase)
     } yield response
 }

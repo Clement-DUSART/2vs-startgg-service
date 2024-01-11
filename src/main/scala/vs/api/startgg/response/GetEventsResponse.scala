@@ -6,17 +6,13 @@ import vs.api.startgg.response.GetEventsResponse.*
 import vs.api.startgg.response.Response.PageInfo
 import vs.api.startgg.response.Response.PaginatedResponse
 
-case class GetEventsResponse(data: EventData)
-    extends PaginatedResponse[GetEventsResponse] {
+case class GetEventsResponse(data: EventData) extends PaginatedResponse[GetEventsResponse] {
   override def getResponsePageInfo: PageInfo = data.event.sets.pageInfo
 
-  override def combineWithResponse(
-      response: GetEventsResponse): GetEventsResponse = {
+  override def combineWithResponse(response: GetEventsResponse): GetEventsResponse = {
     val newNodes = data.event.sets.nodes ++ response.data.event.sets.nodes
 
-    GetEventsResponse(
-      EventData(EventNode(Sets(response.getResponsePageInfo, newNodes)))
-    )
+    GetEventsResponse(EventData(EventNode(Sets(response.getResponsePageInfo, newNodes))))
   }
 }
 
@@ -34,8 +30,7 @@ object GetEventsResponse:
     case class Standing(player: Player)
     case class Player(prefix: Option[String], gamerTag: String)
 
-    given getEventsResponse: Codec[GetEventsResponse] =
-      deriveCodec[GetEventsResponse]
+    given getEventsResponse: Codec[GetEventsResponse] = deriveCodec[GetEventsResponse]
     given eventDataCodec: Codec[EventData] = deriveCodec[EventData]
     given eventNodeCodec: Codec[EventNode] = deriveCodec[EventNode]
     given setsCodec: Codec[Sets] = deriveCodec[Sets]

@@ -17,11 +17,7 @@ object Main extends IOApp:
         val httpServer =
           for {
             backEnd <- Http4sBackend.usingDefaultEmberClientBuilder[IO]()
-            client =
-              new StartGGClient[IO](
-                Uri("https", "api.start.gg", Seq("gql/alpha")),
-                backEnd
-              )
+            client = new StartGGClient[IO](Uri("https", "api.start.gg", Seq("gql/alpha")), backEnd)
             caller = new StartGGCallerImpl[IO](client)
             controller = new Controller[IO](caller)
             port = port"9000"
@@ -40,9 +36,7 @@ object Main extends IOApp:
         httpServer
           .use { server =>
             for {
-              _ <- IO.println(
-                s"Server started at http://localhost:${server.address.getPort}. Press ENTER key to exit."
-              )
+              _ <- IO.println(s"Server started at http://localhost:${server.address.getPort}. Press ENTER key to exit.")
               _ <- IO.never
             } yield ()
           }

@@ -20,16 +20,10 @@ import vs.api.startgg.query.Query.Pagination
 import vs.api.startgg.query.Query.SimpleQuery
 import vs.api.startgg.response.Response.PaginatedResponse
 
-class StartGGClient[F[_]: Async: Applicative](
-    startGGApiUri: Uri,
-    httpClient: SttpBackend[F, Fs2Streams[F]]):
-    private def concurrentRequests[R: Decoder](
-        requests: List[SimpleQuery],
-        apiToken: String) = EitherT(
+class StartGGClient[F[_]: Async: Applicative](startGGApiUri: Uri, httpClient: SttpBackend[F, Fs2Streams[F]]):
+    private def concurrentRequests[R: Decoder](requests: List[SimpleQuery], apiToken: String) = EitherT(
       for {
-        fibers <- requests
-          .map(request => makeRequest[R](request, apiToken).value)
-          .traverse(Concurrent[F].start)
+        fibers <- requests.map(request => makeRequest[R](request, apiToken).value).traverse(Concurrent[F].start)
 
         outcomes <- fibers.traverse(_.join)
         results <- outcomes
@@ -45,9 +39,7 @@ class StartGGClient[F[_]: Async: Applicative](
       } yield results
     )
 
-    def makeRequest[R: Decoder](
-        simpleQuery: SimpleQuery,
-        apiToken: String): EitherT[F, Any, R] = EitherT(
+    def makeRequest[R: Decoder](simpleQuery: SimpleQuery, apiToken: String): EitherT[F, Any, R] = EitherT(
       basicRequest
         .post(startGGApiUri)
         .body(simpleQuery)
@@ -74,5 +66,4 @@ class StartGGClient[F[_]: Async: Applicative](
               .toList
 
           subSequentResponse <- concurrentRequests(nextQueries, apiToken)
-        } yield subSequentResponse
-          .fold(firstResponse)((a, b) => a.combineWithResponse(b))
+        } yield subSequentResponse.fold(firstResponse)((a, b) => a.combineWithResponse(b))

@@ -6,5 +6,4 @@ import io.circe.generic.semiauto.deriveCodec
 case class GGAuthorization(`type`: String, externalUsername: Option[String])
 
 object GGAuthorization:
-    given ggAuthorizationCodec: Codec[GGAuthorization] =
-      deriveCodec[GGAuthorization]
+    given ggAuthorizationCodec: Codec[GGAuthorization] = deriveCodec[GGAuthorization]

@@ -15,7 +15,5 @@ object GetPhaseGroupResponse:
     given phaseGroupCodec: Codec[PhaseGroup] = deriveCodec[PhaseGroup]
     given dataCodec: Codec[ResponseData] = deriveCodec[ResponseData]
 
-    given phaseGroupArrayCodec: Codec[PhaseGroupArray] =
-      deriveCodec[PhaseGroupArray]
-    given phaseGroupResponseCodec: Codec[GetPhaseGroupResponse] =
-      deriveCodec[GetPhaseGroupResponse]
+    given phaseGroupArrayCodec: Codec[PhaseGroupArray] = deriveCodec[PhaseGroupArray]
+    given phaseGroupResponseCodec: Codec[GetPhaseGroupResponse] = deriveCodec[GetPhaseGroupResponse]

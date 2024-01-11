@@ -8,15 +8,12 @@ case class GetEventIdsResponse(data: GetEventIdsResponseTournament)
 
 object GetEventIdsResponse {
 
-  case class GetEventIdsResponseTournament(
-      tournament: GetEventIdsResponseEvents)
+  case class GetEventIdsResponseTournament(tournament: GetEventIdsResponseEvents)
   case class GetEventIdsResponseEvents(events: Seq[GetEventIdsResponseData])
   case class GetEventIdsResponseData(id: Int, name: String)
 
-  given Codec[GetEventIdsResponseTournament] =
-    deriveCodec[GetEventIdsResponseTournament]
-  given Codec[GetEventIdsResponseEvents] =
-    deriveCodec[GetEventIdsResponseEvents]
+  given Codec[GetEventIdsResponseTournament] = deriveCodec[GetEventIdsResponseTournament]
+  given Codec[GetEventIdsResponseEvents] = deriveCodec[GetEventIdsResponseEvents]
   given Codec[GetEventIdsResponseData] = deriveCodec[GetEventIdsResponseData]
   given Codec[GetEventIdsResponse] = deriveCodec[GetEventIdsResponse]
 
