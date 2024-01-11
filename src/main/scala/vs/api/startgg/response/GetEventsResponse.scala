@@ -21,11 +21,11 @@ object GetEventsResponse:
     case class EventNode(sets: Sets)
     case class Sets(pageInfo: PageInfo, nodes: Seq[Node])
     case class Node(identifier: String, fullRoundText: String, slots: Seq[Slot])
-    case class Slot(standing: SlotStanding)
+    case class Slot(standing: Option[SlotStanding])
     case class SlotStanding(stats: Stat, entrant: Entrant)
 
     case class Stat(score: Score)
-    case class Score(value: Int)
+    case class Score(value: Option[Int])
     case class Entrant(standing: Standing)
     case class Standing(player: Player)
     case class Player(prefix: Option[String], gamerTag: String)

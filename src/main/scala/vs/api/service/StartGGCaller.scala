@@ -11,6 +11,8 @@ import vs.api.startgg.client.StartGGClient
 import vs.api.startgg.model.GGParticipant
 import vs.api.startgg.query.*
 import vs.api.startgg.response.*
+import vs.api.startgg.response.GetEventsResponse.EventNode
+import vs.api.startgg.response.GetEventsResponse.SlotStanding
 
 trait StartGGCaller[F[_]] {
   def getTournamentsParticipants(tournamentSlug: String, apiToken: String): EitherT[F, String, Seq[Player]]
@@ -20,7 +22,8 @@ trait StartGGCaller[F[_]] {
   def getEventBracket(
       eventId: String,
       phaseGroupIdentifier: String,
-      apiToken: String): EitherT[F, String, Seq[BracketSet]]
+      apiToken: String
+  ): EitherT[F, String, Seq[BracketSet]]
 
   def getStreamQueue(eventId: String, streamName: String, apiToken: String): EitherT[F, String, Seq[StreamQueue]]
 }
@@ -47,22 +50,36 @@ class StartGGCallerImpl[F[_]: Async](startGGClient: StartGGClient[F]) extends St
     )
   }
 
+  private def getBracketSetFromStanding(
+      identifier: String,
+      phase: String,
+      player1Opt: Option[SlotStanding],
+      player2Opt: Option[SlotStanding]
+  ): Option[BracketSet] =
+    for {
+      player1 <- player1Opt
+      player2 <- player2Opt
+    } yield BracketSet(
+      setIdentifier = identifier,
+      phase = phase,
+      player1Prefix = player1.entrant.standing.player.prefix,
+      player1GamerTag = player1.entrant.standing.player.gamerTag,
+      player2Prefix = player2.entrant.standing.player.prefix,
+      player2GamerTag = player2.entrant.standing.player.gamerTag,
+      score = s"${player1.stats.score.value.getOrElse(0)} - ${player2.stats.score.value.getOrElse(0)}"
+    )
+
   private def mapEventsResponse(response: GetEventsResponse) = response
     .data
     .event
     .sets
     .nodes
-    .map(event =>
-      BracketSet(
-        setIdentifier = event.identifier,
-        phase = event.fullRoundText,
-        player1Prefix = event.slots.head.standing.entrant.standing.player.prefix,
-        player1GamerTag = event.slots.head.standing.entrant.standing.player.gamerTag,
-        player2Prefix = event.slots.last.standing.entrant.standing.player.prefix,
-        player2GamerTag = event.slots.last.standing.entrant.standing.player.gamerTag,
-        score = s"${event.slots.head.standing.stats.score.value} - ${event.slots.last.standing.stats.score.value}"
-      )
-    )
+    .flatMap(event =>
+      getBracketSetFromStanding(
+        event.identifier,
+        event.fullRoundText,
+        event.slots.headOption.flatMap(_.standing),
+        event.slots.lastOption.flatMap(_.standing)))
 
   private def bracketSetSorter(b1: BracketSet, b2: BracketSet): Boolean =
     if (b1.setIdentifier.length == b2.setIdentifier.length)
@@ -82,7 +99,8 @@ class StartGGCallerImpl[F[_]: Async](startGGClient: StartGGClient[F]) extends St
   override def getEventBracket(
       eventId: String,
       phaseGroupIdentifier: String,
-      apiToken: String): EitherT[F, String, Seq[BracketSet]] =
+      apiToken: String
+  ): EitherT[F, String, Seq[BracketSet]] =
     for {
       phaseGroupIdOpt <- getPhaseGroupId(phaseGroupIdentifier, eventId, apiToken).leftMap(_.toString)
       phaseGroupId <- EitherT.fromEither[F](phaseGroupIdOpt.toRight("Phase group id not found"))
@@ -90,8 +108,7 @@ class StartGGCallerImpl[F[_]: Async](startGGClient: StartGGClient[F]) extends St
         .makePaginatedRequest[GetEventsResponse](
           new GetEventsQuery(eventId, phaseGroupId.toString),
           apiToken,
-          perPage = 40
-        )
+          perPage = 40)
         .leftMap(_.toString)
     } yield mapEventsResponse(events).sortWith((a, b) => bracketSetSorter(a, b))
 
@@ -114,7 +131,8 @@ class StartGGCallerImpl[F[_]: Async](startGGClient: StartGGClient[F]) extends St
   private def getPhaseGroupId(
       groupIdentifier: String,
       eventId: String,
-      apiToken: String): EitherT[F, Any, Option[Int]] = {
+      apiToken: String
+  ): EitherT[F, Any, Option[Int]] = {
     val query = new GetPhaseGroupQuery(eventId)
     for {
       groups <- startGGClient.makeRequest[GetPhaseGroupResponse](query, apiToken)
@@ -131,6 +149,7 @@ class StartGGCallerImpl[F[_]: Async](startGGClient: StartGGClient[F]) extends St
           StreamQueue(
             identifier = set.identifier,
             pool = set.phaseGroup.displayIdentifier,
+            phase = set.fullRoundText,
             player1 = set.slots.head.standing.entrant.standing.player.gamerTag,
             player2 = set.slots.last.standing.entrant.standing.player.gamerTag,
             streamName = sq.stream.streamName
@@ -140,7 +159,8 @@ class StartGGCallerImpl[F[_]: Async](startGGClient: StartGGClient[F]) extends St
   override def getStreamQueue(
       eventId: String,
       streamName: String,
-      apiToken: String): EitherT[F, String, Seq[StreamQueue]] =
+      apiToken: String
+  ): EitherT[F, String, Seq[StreamQueue]] =
     for {
       tournamentIdResponse <- startGGClient
         .makeRequest[GetTournamentIdResponse](new GetTournamentIdRequest(eventId), apiToken)

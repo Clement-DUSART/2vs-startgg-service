@@ -68,8 +68,7 @@ class Controller[F[_]: Async: Functor](startGGCaller: StartGGCaller[F]) {
     getPlayersServerEndPoint,
     getEventIdsServerEndPoint,
     getEventsServerEndPoint,
-    getStreamQueueServerEndPoint
-  )
+    getStreamQueueServerEndPoint)
 
   val all: List[ServerEndpoint[Any, F]] = apiEndpoints
 }

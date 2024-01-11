@@ -15,6 +15,7 @@ object GetStreamQueueRequest {
        |     }
        |     sets {
        |       identifier
+       |       fullRoundText
        |       phaseGroup {
        |         displayIdentifier
        |       }

@@ -5,8 +5,7 @@ import vs.api.startgg.query.Query.*
 class GetEventsQuery(eventId: String, phaseGroupId: String) extends PaginatedQuery:
     override def withPaginationInfo(pagination: Pagination): SimpleQuery = SimpleQuery(
       GetEventsQuery.query(pagination),
-      Map("eventId" -> eventId, "phaseGroupId" -> phaseGroupId)
-    )
+      Map("eventId" -> eventId, "phaseGroupId" -> phaseGroupId))
 
 object GetEventsQuery:
     val query =

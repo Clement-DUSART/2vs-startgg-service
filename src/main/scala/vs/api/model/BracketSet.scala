@@ -10,7 +10,8 @@ case class BracketSet(
     player1GamerTag: String,
     player2Prefix: Option[String],
     player2GamerTag: String,
-    score: String)
+    score: String
+)
 
 object BracketSet:
     given bracketSetCodec: Codec[BracketSet] = deriveCodec[BracketSet]

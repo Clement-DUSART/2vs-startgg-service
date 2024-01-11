@@ -10,6 +10,7 @@ import cats.effect.kernel.Outcome.Succeeded
 import cats.implicits.*
 import io.circe
 import io.circe.Decoder
+import io.circe.Json
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3.*
 import sttp.client3.circe.asJson
@@ -36,8 +37,7 @@ class StartGGClient[F[_]: Async: Applicative](startGGApiUri: Uri, httpClient: St
               Left[Any, R](Exception("Cancelled request")).pure[F]
           }
           .map(_.sequence)
-      } yield results
-    )
+      } yield results)
 
     def makeRequest[R: Decoder](simpleQuery: SimpleQuery, apiToken: String): EitherT[F, Any, R] = EitherT(
       basicRequest
@@ -46,13 +46,13 @@ class StartGGClient[F[_]: Async: Applicative](startGGApiUri: Uri, httpClient: St
         .headers(Map("Authorization" -> s"Bearer $apiToken"))
         .response(asJson[R])
         .send(httpClient)
-        .map(_.body)
-    )
+        .map(_.body))
 
     def makePaginatedRequest[R <: PaginatedResponse[R]: Decoder](
         query: PaginatedQuery,
         apiToken: String,
-        perPage: Int = 50): EitherT[F, Any, R] =
+        perPage: Int = 50
+    ): EitherT[F, Any, R] =
         val firstQuery = query.withPaginationInfo(Pagination(1, perPage))
 
         for {

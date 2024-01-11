@@ -13,7 +13,7 @@ object GetStreamQueueResponse {
   case class SlotStanding(entrant: Entrant)
   case class Slot(standing: SlotStanding)
   case class PhaseGroup(displayIdentifier: String)
-  case class Set(identifier: String, phaseGroup: PhaseGroup, slots: Seq[Slot])
+  case class Set(identifier: String, fullRoundText: String, phaseGroup: PhaseGroup, slots: Seq[Slot])
 
   case class Stream(streamName: String)
   case class StreamQueue(stream: Stream, sets: Seq[Set])

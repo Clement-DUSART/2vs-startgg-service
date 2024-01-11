@@ -5,8 +5,7 @@ import vs.api.startgg.query.Query.*
 class GetPlayersFromTournamentQuery(tournamentSlug: String) extends PaginatedQuery:
     override def withPaginationInfo(pagination: Pagination): SimpleQuery = SimpleQuery(
       GetPlayersFromTournamentQuery.query(pagination),
-      Map("tournamentSlug" -> tournamentSlug)
-    )
+      Map("tournamentSlug" -> tournamentSlug))
 
 object GetPlayersFromTournamentQuery:
     val query =
