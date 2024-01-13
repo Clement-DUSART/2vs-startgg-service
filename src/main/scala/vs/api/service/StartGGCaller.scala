@@ -144,13 +144,16 @@ class StartGGCallerImpl[F[_]: Async](startGGClient: StartGGClient[F]) extends St
     .streamQueue
     .flatMap { sq =>
       sq.sets
-        .map { set =>
-          StreamQueue(
+        .flatMap { set =>
+          for {
+            player1 <- set.slots.headOption.flatMap(_.standing)
+            player2 <- set.slots.lastOption.flatMap(_.standing)
+          } yield StreamQueue(
             identifier = set.identifier,
             pool = set.phaseGroup.displayIdentifier,
             phase = set.fullRoundText,
-            player1 = set.slots.head.standing.entrant.standing.player.gamerTag,
-            player2 = set.slots.last.standing.entrant.standing.player.gamerTag,
+            player1 = player1.entrant.standing.player.gamerTag,
+            player2 = player2.entrant.standing.player.gamerTag,
             streamName = sq.stream.streamName
           )
         }

@@ -11,7 +11,7 @@ object GetStreamQueueResponse {
   case class Standing(player: Player)
   case class Entrant(standing: Standing)
   case class SlotStanding(entrant: Entrant)
-  case class Slot(standing: SlotStanding)
+  case class Slot(standing: Option[SlotStanding])
   case class PhaseGroup(displayIdentifier: String)
   case class Set(identifier: String, fullRoundText: String, phaseGroup: PhaseGroup, slots: Seq[Slot])
 
