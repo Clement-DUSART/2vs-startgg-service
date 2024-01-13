@@ -11,7 +11,6 @@ import vs.api.startgg.client.StartGGClient
 import vs.api.startgg.model.GGParticipant
 import vs.api.startgg.query.*
 import vs.api.startgg.response.*
-import vs.api.startgg.response.GetEventsResponse.EventNode
 import vs.api.startgg.response.GetEventsResponse.SlotStanding
 
 trait StartGGCaller[F[_]] {
@@ -33,8 +32,8 @@ class StartGGCallerImpl[F[_]: Async](startGGClient: StartGGClient[F]) extends St
     Player(
       gamerTag = ggPlayer.player.gamerTag,
       prefix = ggPlayer.player.prefix,
-      country = ggPlayer.user.flatMap(_.location.country),
-      city = ggPlayer.user.flatMap(_.location.city),
+      country = ggPlayer.user.flatMap(_.location).flatMap(_.country),
+      city = ggPlayer.user.flatMap(_.location).flatMap(_.city),
       twitter = ggPlayer
         .user
         .flatMap(_.authorizations)
